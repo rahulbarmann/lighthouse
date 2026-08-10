@@ -427,6 +427,7 @@ mod tests {
                 VoluntaryExit,
                 ProposerSlashing,
                 AttesterSlashing,
+                InclusionList,
             ]
             .iter()
             {

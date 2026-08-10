@@ -4177,7 +4177,7 @@ impl<T: BeaconChainTypes> NetworkBeaconProcessor<T> {
         self: &Arc<Self>,
         message_id: MessageId,
         peer_id: PeerId,
-        inclusion_list: Arc<SignedInclusionList<T::EthSpec>>,
+        inclusion_list: Box<SignedInclusionList<T::EthSpec>>,
     ) {
         // TODO(heze): ignore every inclusion list until gossip verification lands, so that
         // unverified messages are never forwarded.

@@ -52,7 +52,7 @@ pub enum PubsubMessage<E: EthSpec> {
     /// Gossipsub message providing notification of signed proposer preferences.
     ProposerPreferences(Arc<SignedProposerPreferences>),
     /// Gossipsub message providing notification of a signed inclusion list.
-    InclusionList(Arc<SignedInclusionList<E>>),
+    InclusionList(Box<SignedInclusionList<E>>),
     /// Gossipsub message providing notification of a light client finality update.
     LightClientFinalityUpdate(Box<LightClientFinalityUpdate<E>>),
     /// Gossipsub message providing notification of a light client optimistic update.
@@ -437,7 +437,7 @@ impl<E: EthSpec> PubsubMessage<E> {
                     GossipKind::InclusionList => {
                         let inclusion_list = SignedInclusionList::from_ssz_bytes(data)
                             .map_err(|e| format!("{:?}", e))?;
-                        Ok(PubsubMessage::InclusionList(Arc::new(inclusion_list)))
+                        Ok(PubsubMessage::InclusionList(Box::new(inclusion_list)))
                     }
                     GossipKind::LightClientFinalityUpdate => {
                         let light_client_finality_update = match fork_context

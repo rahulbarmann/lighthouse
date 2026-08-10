@@ -1021,8 +1021,7 @@ impl<E: EthSpec> BeaconProcessor<E> {
                             work_queues.gossip_proposer_preferences_queue.pop()
                         {
                             Some(item)
-                        // Check inclusion lists. Timeliness is judged when the message is
-                        // processed, so queueing delay can make one untimely.
+                        // Check inclusion lists.
                         } else if let Some(item) = work_queues.gossip_inclusion_list_queue.pop() {
                             Some(item)
                         // Check RPC methods next. Status messages are needed for sync so

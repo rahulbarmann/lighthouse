@@ -528,7 +528,7 @@ impl<T: BeaconChainTypes> NetworkBeaconProcessor<T> {
         self: &Arc<Self>,
         message_id: MessageId,
         peer_id: PeerId,
-        inclusion_list: Arc<SignedInclusionList<T::EthSpec>>,
+        inclusion_list: Box<SignedInclusionList<T::EthSpec>>,
     ) -> Result<(), Error<T::EthSpec>> {
         let processor = self.clone();
         let process_fn =
