@@ -3,9 +3,9 @@
 //! Not fork gated: the committee comes from the plain beacon committees and the store does not
 //! depend on the fork.
 
-use beacon_chain::WhenSlotSkipped;
 use beacon_chain::inclusion_list_store::InclusionListStore;
 use beacon_chain::test_utils::{BeaconChainHarness, EphemeralHarnessType};
+use beacon_chain::{BeaconChainError, WhenSlotSkipped};
 use bls::Signature;
 use ssz_types::VariableList;
 use types::{
@@ -99,12 +99,12 @@ async fn committee_resolves_for_a_slot_in_the_previous_epoch() {
 
     assert_eq!(committee, expected.to_vec());
 
-    assert!(
+    assert!(matches!(
         harness
             .chain
-            .inclusion_list_committee(harness.head_block_root(), slot)
-            .is_err()
-    );
+            .inclusion_list_committee(harness.head_block_root(), slot),
+        Err(BeaconChainError::InvalidShufflingId { .. })
+    ));
 }
 
 #[tokio::test]
