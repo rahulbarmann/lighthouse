@@ -294,7 +294,7 @@ impl<E: EthSpec> InclusionListStore<E> {
 
     /// `hash_tree_root` of the ordered committee as `Vector[ValidatorIndex, INCLUSION_LIST_COMMITTEE_SIZE]`,
     /// matching the gossiped `inclusion_list_committee_root`.
-    fn committee_root(committee: &[u64]) -> Result<Hash256, ssz_types::Error> {
+    pub fn committee_root(committee: &[u64]) -> Result<Hash256, ssz_types::Error> {
         let committee: FixedVector<u64, E::InclusionListCommitteeSize> =
             FixedVector::new(committee.to_vec())?;
         Ok(committee.tree_hash_root())
