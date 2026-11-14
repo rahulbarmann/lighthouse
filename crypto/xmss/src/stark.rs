@@ -2,8 +2,8 @@ use crate::{Error, Hash256, PublicKey, Signature};
 use leanvm::{EthereumClaims, EthereumProof};
 use parking_lot::Mutex;
 
-/// The `log_inv_rate` that proofs are made at. A higher rate makes a smaller proof and a slower
-/// prover. The spec does not fix one yet.
+/// The `log_inv_rate` that proofs are made at. A higher `log_inv_rate` makes a smaller proof and a
+/// slower prover. The spec does not fix one yet.
 pub const LOG_INV_RATE: usize = 1;
 
 /// leanVM must not prove more than one aggregate at a time.
@@ -107,7 +107,8 @@ pub fn prove_aggregates(
 /// Merges `proofs` into one proof of all of their statements.
 ///
 /// Unlike `stark.MergeProofs` in the spec, it takes the statements of each proof, since leanVM
-/// needs them to decode it. The proofs are not verified first. An invalid one fails to merge.
+/// needs them to decode it. The proofs are not verified first, and a single non-empty proof is
+/// returned as it is.
 pub fn merge_proofs(
     proofs: &[(&[AggregateStatement], &AttestationProof)],
 ) -> Result<AttestationProof, Error> {
