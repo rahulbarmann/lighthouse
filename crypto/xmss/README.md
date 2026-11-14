@@ -6,8 +6,7 @@ consensus specs, using [leanVM](https://github.com/leanEthereum/leanVM).
 
 ## Running the Tests
 
-The tests only run in release, since leanVM is too slow in a debug build and overflows its stack
-whilst proving. Run them (in this directory) with:
+Run the tests (in this directory) with:
 
 ```
 $ cargo test --release

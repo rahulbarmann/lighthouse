@@ -155,7 +155,7 @@ impl SecretKey {
         self.0.to_bytes()
     }
 
-    /// Deserialize `self` from bytes.
+    /// Deserialize `self` from bytes, which regenerates the key as `from_seed` does.
     pub fn deserialize(bytes: &[u8]) -> Result<Self, Error> {
         let seed = bytes.try_into().map_err(|_| Error::InvalidByteLength {
             got: bytes.len(),
@@ -165,7 +165,6 @@ impl SecretKey {
     }
 }
 
-// Key generation takes minutes in a debug build.
 #[cfg(all(test, not(debug_assertions)))]
 mod tests {
     use super::*;

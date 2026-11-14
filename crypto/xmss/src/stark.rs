@@ -148,7 +148,6 @@ pub fn verify_aggregates(statements: &[AggregateStatement], proof: &AttestationP
         .is_ok()
 }
 
-// leanVM overflows the stack of a debug build whilst proving.
 #[cfg(all(test, not(debug_assertions)))]
 mod tests {
     use super::*;
