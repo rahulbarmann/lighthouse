@@ -1,0 +1,16 @@
+[package]
+name = "xmss"
+version = "0.1.0"
+edition = { workspace = true }
+
+[dependencies]
+fixed_bytes = { workspace = true }
+leanvm = { workspace = true }
+parking_lot = { workspace = true }
+
+[dev-dependencies]
+criterion = { workspace = true }
+
+[[bench]]
+name = "benchmark"
+harness = false

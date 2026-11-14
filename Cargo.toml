@@ -63,6 +63,7 @@ members = [
     "crypto/eth2_keystore",
     "crypto/eth2_wallet",
     "crypto/kzg",
+    "crypto/xmss",
     "database_manager",
     "lcli",
     "lighthouse",
@@ -174,6 +175,7 @@ initialized_validators = { path = "validator_client/initialized_validators" }
 int_to_bytes = { path = "consensus/int_to_bytes" }
 itertools = "0.14"
 kzg = { path = "crypto/kzg" }
+leanvm = { git = "https://github.com/leanEthereum/leanVM", rev = "e5d75f858e91161921c0afe3d9f56300e9a3a03c" }
 libp2p = { git = "https://github.com/sigp/rust-libp2p", rev = "a5abdd2038d68362bdd3c0226ae177fe64a3a3d0", default-features = false, features = ["identify", "yamux", "noise", "dns", "tcp", "tokio", "secp256k1", "macros", "metrics", "quic", "upnp", "gossipsub", "gossipsub-partial-messages"] }
 libp2p-mplex = { git = "https://github.com/sigp/rust-libp2p", rev = "a5abdd2038d68362bdd3c0226ae177fe64a3a3d0" }
 libsecp256k1 = "0.7"
@@ -279,6 +281,7 @@ warp_utils = { path = "common/warp_utils" }
 webpki-roots = "1"
 workspace_members = { path = "common/workspace_members" }
 xdelta3 = { git = "https://github.com/sigp/xdelta3-rs", rev = "fe3906605c87b6c0515bd7c8fc671f47875e3ccc" }
+xmss = { path = "crypto/xmss" }
 yaml_serde = "0.10"
 zeroize = { version = "1", features = ["zeroize_derive", "serde"] }
 zip = { version = "9.0", default-features = false, features = ["deflate"] }
