@@ -4098,6 +4098,15 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "64cd1e32ddd350061ae6edb1b082d7c54915b5c672c389143b9a63403a109f24"
 
 [[package]]
+name = "fiat_shamir"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "parallel",
+ "primitives",
+]
+
+[[package]]
 name = "field-offset"
 version = "0.3.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5628,6 +5637,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "keccak_gkr"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "fiat_shamir",
+ "parallel",
+ "pcs",
+ "primitives",
+ "tracing",
+]
+
+[[package]]
 name = "konst"
 version = "0.2.20"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5713,6 +5734,52 @@ dependencies = [
  "types",
  "validator_dir",
  "yaml_serde",
+]
+
+[[package]]
+name = "lean_compiler"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "leanvm_core",
+ "primitives",
+]
+
+[[package]]
+name = "lean_da"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "fiat_shamir",
+ "parallel",
+ "pcs",
+ "primitives",
+ "tracing",
+]
+
+[[package]]
+name = "leanvm"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "lean_da",
+ "leanvm_core",
+ "rec_aggregation",
+ "signatures",
+]
+
+[[package]]
+name = "leanvm_core"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "fiat_shamir",
+ "keccak_gkr",
+ "parallel",
+ "pcs",
+ "primitives",
+ "tracing",
+ "verifier",
 ]
 
 [[package]]
@@ -7342,6 +7409,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "parallel"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "libc",
+]
+
+[[package]]
 name = "parity-scale-codec"
 version = "3.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -7412,6 +7487,17 @@ checksum = "f8ed6a7761f76e3b9f92dfb0a60a6a6477c61024b775147ff0973a02653abaf2"
 dependencies = [
  "digest 0.10.7",
  "hmac 0.12.1",
+]
+
+[[package]]
+name = "pcs"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "fiat_shamir",
+ "parallel",
+ "primitives",
+ "tracing",
 ]
 
 [[package]]
@@ -7767,6 +7853,14 @@ dependencies = [
  "fixed-hash",
  "impl-codec",
  "uint 0.9.5",
+]
+
+[[package]]
+name = "primitives"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "parallel",
 ]
 
 [[package]]
@@ -8304,6 +8398,24 @@ dependencies = [
  "rustls-pki-types",
  "time",
  "yasna 0.5.2",
+]
+
+[[package]]
+name = "rec_aggregation"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "fiat_shamir",
+ "keccak_gkr",
+ "lean_compiler",
+ "lean_da",
+ "leanvm_core",
+ "parallel",
+ "pcs",
+ "primitives",
+ "signatures",
+ "tracing",
+ "verifier",
 ]
 
 [[package]]
@@ -9282,6 +9394,16 @@ checksum = "28d567dcbaf0049cb8ac2608a76cd95ff9e4412e1899d389ee400918ca7537f5"
 dependencies = [
  "digest 0.11.3",
  "rand_core 0.10.1",
+]
+
+[[package]]
+name = "signatures"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+dependencies = [
+ "parallel",
+ "primitives",
+ "rand 0.9.5",
 ]
 
 [[package]]
@@ -11002,6 +11124,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "f1bddf1187be692e79c5ffeab891132dfb0f236ed36a43c7ed39f1165ee20191"
 
 [[package]]
+name = "verifier"
+version = "0.1.0"
+source = "git+https://github.com/leanEthereum/leanVM?rev=e5d75f858e91161921c0afe3d9f56300e9a3a03c#e5d75f858e91161921c0afe3d9f56300e9a3a03c"
+
+[[package]]
 name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -11626,6 +11753,16 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "d7d8a75eaf6557bb84a65ace8609883db44a29951042ada9b393151532e41fcb"
 dependencies = [
  "xml-rs",
+]
+
+[[package]]
+name = "xmss"
+version = "0.1.0"
+dependencies = [
+ "criterion",
+ "fixed_bytes",
+ "leanvm",
+ "parking_lot",
 ]
 
 [[package]]
