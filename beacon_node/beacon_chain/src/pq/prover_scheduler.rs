@@ -1087,10 +1087,7 @@ impl<E: EthSpec> Active<E> {
     }
 
     fn complete(mut self, result: &Result<pq_prover::Proof, Error>, elapsed: Duration) {
-        let uncertain = matches!(
-            result,
-            Err(Error::SidecarIo(_) | Error::SidecarProtocol(_) | Error::SidecarIncompatible(_))
-        );
+        let uncertain = matches!(result, Err(Error::ProverUnavailable(_)));
         let mut schedule = self.scheduler.schedule.lock();
         schedule.active = None;
         schedule.active_job = None;
@@ -1100,7 +1097,7 @@ impl<E: EthSpec> Active<E> {
         schedule.unavailable |= uncertain;
         let measured_merge = matches!(
             result,
-            Ok(_) | Err(Error::SidecarProvingFailed(_) | Error::SidecarClaimsMismatch { .. })
+            Ok(_) | Err(Error::ProverFailed | Error::ProverClaimsMismatch { .. })
         );
         if measured_merge
             && matches!(self.work, Work::Initial(_) | Work::Improvement(_))
@@ -1111,7 +1108,7 @@ impl<E: EthSpec> Active<E> {
         }
         debug!(work = ?self.work, ?elapsed, uncertain, "PQ backend request returned");
         if uncertain {
-            warn!("PQ proving lane is unavailable after an ambiguous sidecar failure");
+            warn!("PQ proving lane is unavailable after a prover failure");
         }
         self.completed = true;
         self.scheduler.changed.notify_one();
@@ -1273,7 +1270,7 @@ mod tests {
         let improvement = scheduler.next(seconds(9)).unwrap();
         scheduler.aggregate_changed();
         let active = scheduler.start(seconds(9), improvement).unwrap();
-        let rejected = Err(Error::SidecarProvingFailed("test failure".into()));
+        let rejected = Err(Error::ProverFailed);
         active.complete(&rejected, seconds(4));
         let duty = scheduler.schedule.lock();
         assert_eq!(
@@ -1449,8 +1446,8 @@ mod tests {
                 .start_fallback(now, Slot::new(0), now + seconds(1))
                 .unwrap();
             assert!(matches!(
-                normal.run(|| Err(Error::SidecarInvalidInput("known completion".into()))),
-                Err(Error::SidecarInvalidInput(_)),
+                normal.run(|| Err(Error::ProverInvalidInput("known completion".into()))),
+                Err(Error::ProverInvalidInput(_)),
             ));
             assert!(!scheduler.is_unavailable());
             assert!(harness.shutdown_reasons().is_empty());
@@ -1459,8 +1456,8 @@ mod tests {
                 .start_fallback(now, Slot::new(1), now + seconds(1))
                 .unwrap();
             assert!(matches!(
-                failed.run(|| Err(Error::SidecarIo(std::io::ErrorKind::BrokenPipe.into()))),
-                Err(Error::SidecarIo(_)),
+                failed.run(|| Err(Error::ProverUnavailable("lost".into()))),
+                Err(Error::ProverUnavailable(_)),
             ));
             assert!(scheduler.is_unavailable());
             assert!(
@@ -1500,10 +1497,7 @@ mod tests {
         scheduler.replace(seconds(1), BTreeMap::new(), proposal(), 0);
         let job = scheduler.next(seconds(8)).unwrap();
         let active = scheduler.start(seconds(8), job).unwrap();
-        active.complete(
-            &Err(Error::SidecarIo(std::io::ErrorKind::TimedOut.into())),
-            seconds(1),
-        );
+        active.complete(&Err(Error::ProverUnavailable("lost".into())), seconds(1));
         assert!(
             scheduler
                 .start_fallback(seconds(24), TARGET, seconds(26))

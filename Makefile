@@ -40,6 +40,9 @@ TEST_NETWORK_FORKS=phase0 $(RECENT_FORKS)
 # Extra flags for Cargo
 CARGO_INSTALL_EXTRA_FLAGS?=
 
+# Builds leanVM's CPU tiers with their target features
+install install-lcli: export RUSTC_WRAPPER ?= $(CURDIR)/scripts/leanvm-tier-rustc
+
 # Builds the Lighthouse binary in release (optimized).
 #
 # Binaries will most likely be found in `./target/release`

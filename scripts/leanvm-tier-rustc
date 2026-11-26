@@ -1,0 +1,18 @@
+#!/bin/sh
+# Cargo's rustc wrapper (RUSTC_WRAPPER) for builds with leanVM's prover.
+#
+# leanVM keeps a copy of its prover per CPU tier (crates/experimental_tiers) and picks the fastest
+# the CPU supports at run time, but only tiers compiled by its scripts/tier-rustc get their target
+# features. A tier crate's manifest lies inside the leanVM checkout, so this runs that checkout's
+# own tier-rustc, which always matches the pinned revision. Everything else compiles as asked.
+case "${CARGO_MANIFEST_DIR:-}" in
+*/crates/experimental_tiers/*/*)
+    tier_rustc="${CARGO_MANIFEST_DIR%%/crates/experimental_tiers/*}/scripts/tier-rustc"
+    if [ ! -f "$tier_rustc" ]; then
+        echo "leanvm-tier-rustc: $tier_rustc not found" >&2
+        exit 1
+    fi
+    exec sh "$tier_rustc" "$@"
+    ;;
+esac
+exec "$@"

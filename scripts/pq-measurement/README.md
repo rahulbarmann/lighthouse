@@ -1,15 +1,14 @@
 # PQ timing reports
 
-Run a syncing devnet-0 beacon node without a validator client. Pass the network, execution layer and leanVM sidecar settings used by your deployment, and add:
+Run a syncing devnet-0 beacon node without a validator client. Pass the network and execution layer settings used by your deployment, and add:
 
 ```sh
 lighthouse beacon_node --testnet-dir /path/to/devnet-0 \
   --execution-endpoint http://127.0.0.1:8551 --execution-jwt /path/to/jwt.hex \
-  --pq-prover-socket /path/to/leanvm.sock \
   --pq-measurement --pq-timing-output /path/to/timing-runs
 ```
 
-The existing `lighthouse-pq-bn` launcher supplies the socket when it starts its own sidecar. Observer mode enables every configured attestation subnet and plans one experiment every three slots. The experiment receives real network inputs and uses the real proving lane. Synthetic outputs stay private. A regular validator-serving beacon node can use `--pq-timing-output` alone to export its real workload.
+Observer mode enables every configured attestation subnet and plans one experiment every three slots. The experiment receives real network inputs and uses the real proving lane. Synthetic outputs stay private. A regular validator-serving beacon node can use `--pq-timing-output` alone to export its real workload.
 
 The output root contains one directory per process run. It holds `run.json` and finalized `events-*.jsonl.zst` chunks. Temporary chunks end in `.partial`. The manifest records which chunks are available, queue drops and retention gaps. Terminate the beacon node normally to finish the last chunk. Aggregate operation durations use a monotonic clock, and receive/completion placement uses the recorded wall/slot clock. Receipts are stamped after libp2p's Snappy transform and deduplication, before SSZ decode. Rollovers retain their full offset from the reference slot.
 

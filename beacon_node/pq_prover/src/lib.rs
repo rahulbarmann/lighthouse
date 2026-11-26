@@ -5,57 +5,50 @@
 //! `stark.VerifyAggregates`. [`ProverBackend`] is those three functions. Two backends exist:
 //!
 //! - [`ReferenceBackend`]: the spec's stand-in, where a proof is the signatures themselves.
-//!   No external process, usable in debug builds and CI.
-//! - [`SidecarBackend`] (Unix only): proofs from leanVM's `leanvm-sidecar` process over its
-//!   Unix socket.
+//!   Usable in debug builds and CI.
+//! - [`InProcessBackend`] (`leanvm` feature): proofs from leanVM's prover, in this process.
 //!
 //! # The leanVM revision
 //!
 //! Everything from leanVM is pinned to ONE commit, [`LEANVM_REV`]: the `lean_xmss` scheme
-//! behind the `xmss` crate, the claims encoding, the sidecar client, and the `leanvm-sidecar`
-//! binary every node runs. Build the sidecar from exactly that commit:
+//! behind the `xmss` crate, the claims encoding and the prover. A proof only verifies with a
+//! verifier built from a compatible revision, and nothing on the wire detects a mismatch, so
+//! all nodes of a network must agree on the commit.
 //!
-//! ```text
-//! git clone https://github.com/leanEthereum/leanVM && cd leanVM
-//! git checkout --detach "$(cat /path/to/lighthouse/leanvm-revision)"
-//! cargo build --release -p leanvm-sidecar --features experimental_prover
-//! target/release/leanvm-sidecar --socket <dir only the node's user can write>/sidecar.sock
-//! ```
+//! # CPU tiers
 //!
-//! (On x86_64 add `RUSTFLAGS="-C target-feature=+avx2,+pclmulqdq"` or `-C target-cpu=native`
-//! for the fast kernels.) A proof only verifies with a verifier built from a compatible
-//! revision, and nothing on the wire detects a mismatch: the hello's verifier tag
-//! (`leanvm-v1`) is not bumped when the guest program changes. A mismatched sidecar shows up
-//! only as proofs that fail to verify, so all nodes of a network must agree on the commit.
+//! leanVM's prover picks its fastest kernels for the CPU at run time, but only from tiers built
+//! with leanVM's `scripts/tier-rustc` as `RUSTC_WRAPPER`. Without it, a build only has the base
+//! tier and proving is slower than the CPU allows; leanVM then warns on stderr on the first
+//! proof. See `scripts/leanvm-tier-rustc`.
 //!
 //! # Blocking
 //!
 //! Every method blocks the calling thread: a proof takes seconds, a verification
-//! milliseconds plus a socket round trip. Never call them from an async task; use
-//! `spawn_blocking` or a beacon processor worker.
+//! milliseconds. Never call them from an async task; use `spawn_blocking` or a beacon
+//! processor worker.
 //!
 //! # Leaf indices
 //!
 //! A leanVM claim is `(pubkey, message)`. The leaf a signature was made at is not part of what
-//! a proof attests (leanEthereum/leanVM#787), so [`SidecarBackend::verify`] cannot enforce
+//! a proof attests (leanEthereum/leanVM#787), so [`InProcessBackend::verify`] cannot enforce
 //! [`Statement::leaf_index`]: it shows each key signed the message at *some* leaf.
-//! [`SidecarBackend::prove`] does refuse signatures made at another leaf, since it sees them.
+//! [`InProcessBackend::prove`] does refuse signatures made at another leaf, since it sees them.
 //! [`ReferenceBackend`] checks the leaf on every verification, as the spec does.
 
 mod claims;
+#[cfg(feature = "leanvm")]
+mod in_process;
 mod reference;
-#[cfg(unix)]
-mod sidecar;
 
 pub use claims::{statements_to_claims, statements_to_claims_bytes};
+#[cfg(feature = "leanvm")]
+pub use in_process::{InProcessBackend, InProcessConfig, MAX_CHILDREN_PER_AGGREGATE, merge_plan};
 pub use leanvm_claims::AggregateClaims;
 pub use reference::ReferenceBackend;
-#[cfg(unix)]
-pub use sidecar::{MAX_CHILDREN_PER_AGGREGATE, SidecarBackend, SidecarConfig, merge_plan};
 pub use xmss::{XMSS_MESSAGE_BYTES_LEN, XMSS_SIGNATURE_BYTES_LEN, XmssPublicKey, XmssSignature};
 
-/// The leanVM commit every leanVM dependency of the workspace is pinned to, and that the
-/// `leanvm-sidecar` binary must be built from.
+/// The leanVM commit every leanVM dependency of the workspace is pinned to.
 pub const LEANVM_REV: &str = env!("LIGHTHOUSE_LEANVM_REVISION");
 
 /// The spec's `XMSSAggregateStatement`: every one of `pubkeys` signed `message` at
@@ -118,34 +111,24 @@ pub enum Error {
     /// A signature handed to `prove` does not verify (reference backend).
     #[error("signature {signature} of statement {statement} is invalid")]
     InvalidSignature { statement: usize, signature: usize },
-    /// The socket failed or timed out, or the sidecar closed it. The next call reconnects.
-    #[error("sidecar connection: {0}")]
-    SidecarIo(#[source] std::io::Error),
-    /// The peer is not a leanVM sidecar, speaks another protocol version, or proves for
-    /// another verifier.
-    #[error("incompatible sidecar: {0}")]
-    SidecarIncompatible(String),
-    /// The sidecar's bytes are not the protocol. The next call reconnects.
-    #[error("sidecar protocol violation: {0}")]
-    SidecarProtocol(String),
-    /// Status 1: a rate out of range, too many children, nothing to prove.
-    #[error("sidecar rejected the request as invalid input: {0}")]
-    SidecarInvalidInput(String),
-    /// Status 2: a signature does not verify.
-    #[error("sidecar found an invalid signature: {0}")]
-    SidecarInvalidSignature(String),
-    /// Status 3: a child proof is invalid or does not decode.
-    #[error("sidecar found an invalid child proof: {0}")]
-    SidecarInvalidChild(String),
-    /// Status 4: proving failed, e.g. the request is too large for one proof.
-    #[error("sidecar failed to prove: {0}")]
-    SidecarProvingFailed(String),
-    /// Status 5: the request did not decode, or exceeds the sidecar's maximum request size.
-    #[error("sidecar could not read the request: {0}")]
-    SidecarMalformed(String),
-    /// The sidecar proved something other than what was asked.
-    #[error("sidecar returned a proof of {found} claims, expected {expected} other claims")]
-    SidecarClaimsMismatch { expected: usize, found: usize },
+    /// leanVM's prover cannot be used, e.g. it already runs with another thread count.
+    #[error("prover unavailable: {0}")]
+    ProverUnavailable(String),
+    /// A rate out of range, too many children, nothing to prove.
+    #[error("prover rejected the request as invalid input: {0}")]
+    ProverInvalidInput(String),
+    /// A signature does not verify.
+    #[error("prover found an invalid signature")]
+    ProverInvalidSignature,
+    /// A child proof is invalid.
+    #[error("prover found an invalid child proof")]
+    ProverInvalidChild,
+    /// Proving failed, e.g. the request is too large for one proof.
+    #[error("prover failed to prove")]
+    ProverFailed,
+    /// The prover proved something other than what was asked.
+    #[error("prover returned a proof of {found} claims, expected {expected} other claims")]
+    ProverClaimsMismatch { expected: usize, found: usize },
 }
 
 /// Proves, merges and verifies aggregates of XMSS signatures (the spec's `stark` module).
@@ -191,7 +174,7 @@ pub trait ProverBackend: Send + Sync {
     }
 
     /// The spec's `VerifyAggregates`. `Ok(false)` is an invalid proof; `Err` means the
-    /// backend could not decide (e.g. the sidecar is unreachable).
+    /// backend could not decide.
     fn verify(&self, statements: &[Statement], proof: &Proof) -> Result<bool, Error>;
 }
 

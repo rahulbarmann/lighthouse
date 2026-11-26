@@ -324,11 +324,18 @@ Options:
           value + 1.
       --pq-aggregate-all
           Prove PQ attestation aggregates for every observed committee.
+      --pq-measurement
+          Run PQ observer timing experiments using live gossip on all
+          attestation subnets.
       --pq-prover-backend <pq-prover-backend>
-          Proof backend for a PQ network. [default: sidecar] [possible values:
-          sidecar]
-      --pq-prover-socket <PATH>
-          Unix socket for the leanVM sidecar on a PQ network.
+          Proof backend for a PQ network. [default: in-process] [possible
+          values: in-process]
+      --pq-prover-threads <THREADS>
+          Threads for leanVM's prover on a PQ network, 0 for one per core.
+          [default: 0]
+      --pq-timing-output <DIR>
+          Export local PQ timing events. Observer mode defaults to pq-timing
+          under the beacon data directory.
       --prepare-payload-lookahead <MILLISECONDS>
           The time before the start of a proposal slot at which payload
           attributes should be sent. Low values are useful for execution nodes

@@ -24,14 +24,15 @@ pub static INVALID_HOLESKY_BLOCK_ROOT: LazyLock<Hash256> = LazyLock::new(|| {
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub enum PqProverConfig {
-    Sidecar(PathBuf),
+    /// leanVM's prover in this process, with `threads` prover threads (0: one per core).
+    InProcess { threads: usize },
     #[serde(skip)]
     Reference,
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Deserialize, Serialize)]
 pub struct ChainConfig {
-    /// PQ prover process. Reference is reserved for in-process consensus tests.
+    /// PQ prover. Reference is reserved for consensus tests.
     #[serde(default)]
     pub pq_prover: Option<PqProverConfig>,
     /// Keep raw PQ signatures even without a local VC aggregation subscription.

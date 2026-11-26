@@ -5,7 +5,7 @@
 //! proofs and merges them, verifies everything, and prints the timings and sizes as JSON.
 
 use clap::ArgMatches;
-use clap_utils::{parse_optional, parse_required};
+use clap_utils::parse_required;
 use ethereum_hashing::hash_fixed;
 use pq_prover::{LEANVM_REV, Proof, ProverBackend, ReferenceBackend, Statement};
 use rayon::prelude::*;
@@ -17,12 +17,12 @@ use xmss::{LeafIndex, XMSS_SIGNATURE_BYTES_LEN, XmssPublicKey, XmssSecretKey, Xm
 struct Report {
     backend: &'static str,
     leanvm_rev: &'static str,
-    /// `stable` or `experimental`, from the sidecar's hello.
-    sidecar_prover: Option<String>,
+    /// `experimental` for the in-process backend.
+    prover: Option<&'static str>,
     log_inv_rate: Option<u8>,
     fake_crypto: bool,
     host: Host,
-    /// Threads used for key generation and signing (not for proving: that is the sidecar's).
+    /// Threads used for key generation and signing (not for proving: see `--prover-threads`).
     threads: usize,
     signers_per_proof: usize,
     messages_per_proof: usize,
@@ -139,42 +139,22 @@ fn key_seed(seed: u64, signer: usize) -> [u8; 32] {
 fn make_backend(
     matches: &ArgMatches,
     rate: u8,
-) -> Result<(Box<dyn ProverBackend>, Option<String>), String> {
+) -> Result<(Box<dyn ProverBackend>, Option<&'static str>), String> {
     let backend: String = parse_required(matches, "backend")?;
     match backend.as_str() {
         "reference" => Ok((Box::new(ReferenceBackend), None)),
-        "sidecar" => make_sidecar_backend(matches, rate),
+        "in-process" => {
+            use pq_prover::{InProcessBackend, InProcessConfig};
+
+            let backend = InProcessBackend::new(InProcessConfig {
+                log_inv_rate: rate,
+                threads: parse_required(matches, "prover-threads")?,
+            })
+            .map_err(|e| format!("Unable to start leanVM's prover: {e}"))?;
+            Ok((Box::new(backend), Some("experimental")))
+        }
         other => Err(format!("Unknown backend {other}")),
     }
-}
-
-#[cfg(unix)]
-fn make_sidecar_backend(
-    matches: &ArgMatches,
-    rate: u8,
-) -> Result<(Box<dyn ProverBackend>, Option<String>), String> {
-    use pq_prover::{SidecarBackend, SidecarConfig};
-
-    let socket: std::path::PathBuf =
-        parse_optional(matches, "socket")?.ok_or("--socket is required with --backend sidecar")?;
-    let mut config = SidecarConfig::new(socket);
-    config.log_inv_rate = rate;
-    config.prove_timeout =
-        parse_optional::<u64>(matches, "prove-timeout")?.map(Duration::from_secs);
-    let backend = SidecarBackend::connect(config)
-        .map_err(|e| format!("Unable to connect to the sidecar: {e}"))?;
-    let prover = backend
-        .prover_kind()
-        .map_err(|e| format!("Unable to read the sidecar's prover: {e}"))?;
-    Ok((Box::new(backend), Some(prover)))
-}
-
-#[cfg(not(unix))]
-fn make_sidecar_backend(
-    _matches: &ArgMatches,
-    _rate: u8,
-) -> Result<(Box<dyn ProverBackend>, Option<String>), String> {
-    Err("The sidecar backend needs Unix sockets".to_string())
 }
 
 pub fn run(matches: &ArgMatches) -> Result<(), String> {
@@ -200,8 +180,8 @@ pub fn run(matches: &ArgMatches) -> Result<(), String> {
         .and_then(|offset| first_leaf.checked_add(offset))
         .ok_or("--leaf-index plus --merge exceeds the 2^32 leaves of a key")?;
 
-    let (backend, sidecar_prover) = make_backend(matches, rate)?;
-    let is_sidecar = sidecar_prover.is_some();
+    let (backend, prover) = make_backend(matches, rate)?;
+    let is_leanvm = prover.is_some();
 
     let pool = rayon::ThreadPoolBuilder::new()
         .num_threads(threads)
@@ -369,7 +349,7 @@ pub fn run(matches: &ArgMatches) -> Result<(), String> {
         if !valid.map_err(|e| format!("Verification failed: {e}"))? {
             return Err("The merged proof does not verify".to_string());
         }
-        let (rounds, proofs_made) = merge_cost(is_sidecar, children.len());
+        let (rounds, proofs_made) = merge_cost(is_leanvm, children.len());
         Some(Merge {
             children: children.len(),
             total_signers: signers.saturating_mul(children.len()),
@@ -388,8 +368,8 @@ pub fn run(matches: &ArgMatches) -> Result<(), String> {
     let report = Report {
         backend: backend.name(),
         leanvm_rev: LEANVM_REV,
-        sidecar_prover,
-        log_inv_rate: is_sidecar.then_some(rate),
+        prover,
+        log_inv_rate: is_leanvm.then_some(rate),
         fake_crypto: xmss::FAKE_CRYPTO,
         host: Host {
             os: std::env::consts::OS,
@@ -416,16 +396,10 @@ pub fn run(matches: &ArgMatches) -> Result<(), String> {
 }
 
 /// `(rounds, proofs made)` to merge `children` proofs.
-#[cfg(unix)]
-fn merge_cost(is_sidecar: bool, children: usize) -> (usize, usize) {
-    if is_sidecar {
+fn merge_cost(is_leanvm: bool, children: usize) -> (usize, usize) {
+    if is_leanvm {
         pq_prover::merge_plan(children)
     } else {
         (1, 1)
     }
-}
-
-#[cfg(not(unix))]
-fn merge_cost(_is_sidecar: bool, _children: usize) -> (usize, usize) {
-    (1, 1)
 }

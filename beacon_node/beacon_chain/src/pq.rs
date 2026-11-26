@@ -26,28 +26,24 @@ impl<E: EthSpec> Provers<E> {
                 scheduler: Arc::default(),
                 local_duties: duties::LocalDuties::default(),
             }),
-            #[cfg(unix)]
-            PqProverConfig::Sidecar(path) => {
-                use pq_prover::{SidecarBackend, SidecarConfig};
-                use std::time::Duration;
+            PqProverConfig::InProcess { threads } => {
+                use pq_prover::{InProcessBackend, InProcessConfig};
 
-                let mut config = SidecarConfig::new(path);
-                config.prove_timeout = None;
-                config.verify_timeout = Some(Duration::from_secs(2));
-                let aggregate = SidecarBackend::connect(config.clone())
-                    .map_err(|error| format!("Unable to connect to PQ prover: {error:?}"))?;
-                // Block verification has a separate connection from gossip, whose queue
-                // may be busy with a burst of aggregates at the end of the slot.
-                let block = SidecarBackend::new(config);
+                let backend = InProcessBackend::new(InProcessConfig {
+                    threads: *threads,
+                    ..InProcessConfig::default()
+                })
+                .map_err(|error| format!("Unable to start the PQ prover: {error:?}"))?;
+                // One backend serves gossip and blocks: leanVM verifies without waiting for
+                // proofs in progress.
+                let backend: Arc<dyn ProverBackend> = Arc::new(backend);
                 Ok(Self {
-                    aggregate: Arc::new(aggregate),
-                    block: Arc::new(block),
+                    aggregate: backend.clone(),
+                    block: backend,
                     scheduler: Arc::default(),
                     local_duties: duties::LocalDuties::default(),
                 })
             }
-            #[cfg(not(unix))]
-            PqProverConfig::Sidecar(_) => Err("PQ sidecar requires Unix sockets".into()),
         }
     }
 }

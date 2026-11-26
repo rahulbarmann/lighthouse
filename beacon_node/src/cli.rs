@@ -428,16 +428,17 @@ pub fn cli_app() -> Command {
         .arg(
             Arg::new("pq-prover-backend")
                 .long("pq-prover-backend")
-                .value_parser(["sidecar"])
-                .default_value("sidecar")
+                .value_parser(["in-process"])
+                .default_value("in-process")
                 .help("Proof backend for a PQ network.")
                 .display_order(0)
         )
         .arg(
-            Arg::new("pq-prover-socket")
-                .long("pq-prover-socket")
-                .value_name("PATH")
-                .help("Unix socket for the leanVM sidecar on a PQ network.")
+            Arg::new("pq-prover-threads")
+                .long("pq-prover-threads")
+                .value_name("THREADS")
+                .default_value("0")
+                .help("Threads for leanVM's prover on a PQ network, 0 for one per core.")
                 .display_order(0)
         )
         .arg(
